@@ -5,7 +5,6 @@ A lightweight, single-page application comprising a World Clock and a Time Zone 
  
 ## 🚀 Live Demo
 Try the tool here: **[https://thettun-web.github.io/time-tools/](https://thettun-web.github.io/time-tools/)**
-*(Note: If the link doesn't work immediately, ensure GitHub Pages is enabled in Settings > Pages)*
 
 ## ✨ Features
 
