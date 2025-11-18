@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Tools</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕰️</text></svg>">
+    <meta property="og:title" content="Time Tools - World Clock & Converter">
+    <meta property="og:description" content="A lightweight, single-page tool for tracking world time and converting time zones instantly. No ads, no tracking, just time.">
+    <meta property="og:image" content="https://thettun-web.github.io/time-tools/social-preview.png">
+    <meta property="og:url" content="https://thettun-web.github.io/time-tools/">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="https://thettun-web.github.io/time-tools/social-preview.png">
+
+    <style>
+        /* --- 1. General Setup & Variables --- */
+        :root {
+            --bg-color: #1a1a1a;
+            --card-color: #2c2c2c;
+            --text-color: #f0f0f0;
+            --text-muted: #aaa;
+            --accent-color: #00aaff;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --border-color: #444;
+            --bmc-yellow: #FFDD00;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px; /* Increased slightly for side-by-side layout */
+            margin: 0 auto;
+        }
+        
+        h1, h2 {
+            text-align: center;
+            color: var(--accent-color);
+            margin-bottom: 24px;
+        }
+        
+        h3 {
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+        
+        /* --- 2. Tab System --- */
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+        
+        .tab-link {
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px; 
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+        
+        .tab-link:hover {
+            color: var(--text-color);
+        }
+
+        .tab-link.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+
+        .tab-content {
+            display: none; 
+        }
+        
+        .tab-content.active {
+            display: block; 
+        }
+
+        /* --- 3. Layout Grid (NEW) --- */
+        .main-grid {
+            display: grid;
+            /* Left column takes remaining space, Right column is fixed 320px */
+            grid-template-columns: 1fr 320px; 
+            gap: 30px;
+            align-items: start; /* Align items to top */
+        }
+
+        /* --- 4. Shared Input Styles --- */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        input[type="text"],
+        input[type="date"],
+        input[type="time"] {
+            flex-grow: 1;
+            padding: 12px 15px;
+            font-size: 16px;
+            background-color: var(--card-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+            min-width: 0; /* Prevents grid blowout */
+        }
+        
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        input[type="time"]:focus {
+            border-color: var(--accent-color);
+        }
+        
+        button {
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        button:hover {
+            background-color: #0088cc;
+        }
+
+        /* --- 5. Tool 1: World Clock --- */
+        #clock-container {
+            display: grid;
+            /* Adjusted minmax to fit better in the narrower column */
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .clock-card {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            border-left: 5px solid var(--accent-color);
+        }
+
+        .clock-card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+            text-align: left;
+            color: var(--text-color);
+        }
+
+        .clock-card .date {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .clock-card .time {
+            font-size: 2.2rem;
+            font-weight: 600;
+            font-family: "Courier New", Courier, monospace;
+            color: var(--accent-color);
+        }
+
+        .clock-card .remove-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: #444;
+            color: var(--text-color);
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 16px;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            padding: 0;
+        }
+
+        .clock-card .remove-btn:hover {
+            background-color: var(--danger-color);
+            color: #fff;
+        }
+
+        /* --- 6. Tool 2: Time Converter --- */
+        .converter-grid {
+            display: grid;
+            /* Stack on top of each other by default in this layout */
+            grid-template-columns: 1fr; 
+            gap: 30px;
+        }
+        
+        @media (min-width: 1100px) {
+             /* If screen is wide enough, put converter columns side by side */
+            .converter-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .converter-col {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .converter-col label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: -10px;
+        }
+        
+        #convert-btn {
+            width: 100%;
+            grid-column: 1 / -1;
+            margin-top: 10px;
+        }
+        
+        #converter-result {
+            grid-column: 1 / -1;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: var(--card-color);
+            min-height: 100px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        #converter-result.success {
+            border-left: 5px solid var(--success-color);
+            color: var(--success-color);
+        }
+        
+        #converter-result.error {
+            border-left: 5px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+        
+        #converter-result strong {
+            font-size: 1.5rem;
+            color: var(--text-color);
+            display: block;
+        }
+
+        /* --- 7. Support / BMC Section (SIDEBAR) --- */
+        .bmc-sidebar {
+            background-color: var(--card-color);
+            padding: 25px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            /* Optional: Makes it stay on screen while scrolling */
+            position: sticky;
+            top: 20px; 
+        }
+
+        .bmc-sidebar p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .bmc-qr {
+            width: 150px;
+            height: 150px;
+            border-radius: 10px;
+            border: 4px solid white;
+            background-color: white;
+        }
+
+        .bmc-btn {
+            display: inline-block;
+            background-color: var(--bmc-yellow);
+            color: #000000;
+            font-weight: 700;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            transition: transform 0.2s ease;
+            width: 100%;
+        }
+
+        .bmc-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* --- 8. Mobile Responsiveness --- */
+        @media (max-width: 850px) {
+            body {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            /* Collapse main grid to single column */
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            /* Sidebar becomes a footer again on mobile */
+            .bmc-sidebar {
+                position: static;
+                margin-top: 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Time Tools</h1>
+
+        <div class="tab-nav">
+            <button class="tab-link active" data-tab="world-clock">World Clock</button>
+            <button class="tab-link" data-tab="converter">Time Converter</button>
+        </div>
+
+        <datalist id="timezone-list"></datalist>
+
+        <div class="main-grid">
+
+            <div class="tab-content-container">
+
+                <div id="world-clock" class="tab-content active">
+                    <h2>World Clock</h2>
+                    <div class="controls">
+                        <input type="text" id="tz-input" placeholder="Start typing a time zone (e.g., 'Asia/Tokyo')" list="timezone-list">
+                        <button id="add-btn">Add Clock</button>
+                    </div>
+                    <div id="clock-container">
+                        </div>
+                </div>
+
+                <div id="converter" class="tab-content">
+                    <h2>Time Converter</h2>
+                    <div class="converter-grid">
+                        
+                        <div class="converter-col">
+                            <h3>Source Time (Date, Time and City)</h3>
+                            <label for="src-date">Date (DD/MM/YY):</label>
+                            <input type="text" id="src-date" placeholder="DD/MM/YY">
+                            
+                            <label for="src-time">Time (HH:MM):</label>
+                            <input type="time" id="src-time">
+                            
+                            <label for="src-zone">Source Time Zone:</label>
+                            <input type="text" id="src-zone" placeholder="e.g., 'Asia/Yangon'" list="timezone-list">
+                        </div>
+                        
+                        <div class="converter-col">
+                            <h3>Target Time Zone</h3>
+                            <label for="target-tz">Target IANA Time Zone:</label>
+                            <input type="text" id="target-tz" placeholder="e.g., 'Europe/Berlin'" list="timezone-list">
+                        </div>
+                        
+                        <button id="convert-btn">Convert</button>
+                        <div id="converter-result">
+                            Please fill out all fields to see the converted time.
+                        </div>
+                    </div>
+                </div>
+
+            </div> <aside class="bmc-sidebar">
+                <h3>Support the Dev</h3>
+                <p>Find these tools helpful? Consider buying me a coffee!</p>
+                <img src="bmc_qr.png" alt="QR Code for Buy Me a Coffee" class="bmc-qr">
+                <a href="https://buymeacoffee.com/thetnaingtun" target="_blank" class="bmc-btn">
+                    ☕ Buy me a coffee
+                </a>
+            </aside>
+
+        </div> </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- 1. COMMON FUNCTIONS & SETUP ---
+            
+            function populateTimezoneList() {
+                const datalist = document.getElementById('timezone-list');
+                try {
+                    const timezones = Intl.supportedValuesOf('timeZone');
+                    timezones.forEach(tz => {
+                        const option = document.createElement('option');
+                        option.value = tz;
+                        datalist.appendChild(option);
+                    });
+                } catch (e) {
+                    console.error("Browser does not support Intl.supportedValuesOf('timeZone').", e);
+                }
+            }
+
+            function setupTabs() {
+                const tabLinks = document.querySelectorAll('.tab-link');
+                const tabContents = document.querySelectorAll('.tab-content');
+
+                tabLinks.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const targetId = button.dataset.tab;
+                        const targetContent = document.getElementById(targetId);
+
+                        tabLinks.forEach(link => link.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+
+                        button.classList.add('active');
+                        targetContent.classList.add('active');
+                    });
+                });
+            }
+
+            // --- 2. WORLD CLOCK LOGIC ---
+            
+            const wc = {
+                tzInput: document.getElementById('tz-input'),
+                addBtn: document.getElementById('add-btn'),
+                clockContainer: document.getElementById('clock-container'),
+                
+                dateOptions: {
+                    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                },
+                timeOptions: {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+                },
+
+                updateClock(card) {
+                    const timeZone = card.dataset.timezone;
+                    const now = new Date();
+                    try {
+                        const dateStr = now.toLocaleDateString('en-US', { ...this.dateOptions, timeZone });
+                        const timeStr = now.toLocaleTimeString('en-US', { ...this.timeOptions, timeZone });
+                        card.querySelector('.date').textContent = dateStr;
+                        card.querySelector('.time').textContent = timeStr;
+                    } catch (e) {
+                        card.querySelector('.time').textContent = "Invalid";
+                    }
+                },
+
+                updateAllClocks() {
+                    const cards = document.querySelectorAll('#world-clock .clock-card');
+                    cards.forEach(card => this.updateClock(card));
+                },
+
+                addClock(timeZone) {
+                    if (!timeZone) return;
+                    
+                    try {
+                        new Intl.DateTimeFormat(undefined, { timeZone: timeZone });
+                    } catch (e) {
+                        alert(`'${timeZone}' is not a valid IANA time zone name.`);
+                        return;
+                    }
+                    
+                    if (document.querySelector(`#world-clock [data-timezone="${timeZone}"]`)) {
+                        alert(`'${timeZone}' has already been added.`);
+                        return;
+                    }
+                    
+                    const card = document.createElement('div');
+                    card.className = 'clock-card';
+                    card.dataset.timezone = timeZone;
+                    card.innerHTML = `
+                        <button class="remove-btn" title="Remove clock">&times;</button>
+                        <h2>${timeZone.replace(/_/g, ' ')}</h2>
+                        <div class="date">Loading...</div>
+                        <div class="time">Loading...</div>
+                    `;
+                    
+                    card.querySelector('.remove-btn').addEventListener('click', () => {
+                        card.remove();
+                    });
+                    
+                    this.clockContainer.appendChild(card);
+                    this.updateClock(card);
+                },
+
+                init() {
+                    this.addBtn.addEventListener('click', () => {
+                        this.addClock(this.tzInput.value.trim());
+                        this.tzInput.value = '';
+                    });
+                    
+                    this.tzInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            this.addBtn.click();
+                        }
+                    });
+                    
+                    setInterval(() => this.updateAllClocks(), 1000);
+                    
+                    try {
+                        const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        this.addClock(localTimeZone);
+                    } catch(e) { /* Failsafe */ }
+                    
+                    this.addClock('UTC');
+                    this.updateAllClocks();
+                }
+            };
+            
+            // --- 3. TIME CONVERTER LOGIC ---
+            
+            const tc = {
+                srcDate: document.getElementById('src-date'),
+                srcTime: document.getElementById('src-time'),
+                srcZone: document.getElementById('src-zone'),
+                targetTz: document.getElementById('target-tz'),
+                convertBtn: document.getElementById('convert-btn'),
+                resultBox: document.getElementById('converter-result'),
+                
+                autoFillSource() {
+                    const now = new Date();
+                    const day = String(now.getDate()).padStart(2, '0');
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const year = String(now.getFullYear()).slice(-2);
+                    this.srcDate.value = `${day}/${month}/${year}`;
+                    this.srcTime.value = now.toTimeString().slice(0, 5);
+                    try {
+                        this.srcZone.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    } catch(e) { /* Failsafe */ }
+                },
+                
+                displayResult(message, isError = false) {
+                    this.resultBox.innerHTML = message;
+                    this.resultBox.className = isError ? 'error' : 'success';
+                },
+
+                handleConversion() {
+                    const dateStr = this.srcDate.value;
+                    const time = this.srcTime.value;
+                    const sourceZone = this.srcZone.value.trim();
+                    const targetZone = this.targetTz.value.trim();
+
+                    if (!dateStr || !time || !sourceZone || !targetZone) {
+                        this.displayResult("Please fill out all four fields.", true);
+                        return;
+                    }
+
+                    const dateParts = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
+                    if (!dateParts) {
+                        this.displayResult("Date must be in `DD/MM/YY` format (e.g., `25/10/25`).", true);
+                        return;
+                    }
+                    
+                    const day = dateParts[1];
+                    const month = dateParts[2];
+                    const yearDigits = parseInt(dateParts[3], 10);
+                    const fullYear = (yearDigits < 70) ? 2000 + yearDigits : 1900 + yearDigits;
+                    const parsedDate = `${fullYear}-${month}-${day}`;
+                    
+                    let sourceOffset;
+                    try {
+                        const refDate = new Date(`${parsedDate}T12:00:00Z`);
+                        const offsetFormatter = new Intl.DateTimeFormat('en', { 
+                            timeZone: sourceZone, timeZoneName: 'longOffset' 
+                        });
+                        const offsetString = offsetFormatter.format(refDate);
+                        const offsetParts = offsetString.replace('GMT', '').split(':');
+                        const sign = offsetParts[0][0];
+                        const hours = offsetParts[0].substring(1);
+                        const minutes = offsetParts[1] || '00';
+                        sourceOffset = `${sign}${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+                        new Intl.DateTimeFormat(undefined, { timeZone: targetZone });
+                    } catch (e) {
+                        this.displayResult(`Invalid Time Zone. Please use the autocomplete list.`, true);
+                        return;
+                    }
+                    
+                    const isoString = `${parsedDate}T${time}:00${sourceOffset}`;
+                    const sourceDate = new Date(isoString);
+
+                    if (isNaN(sourceDate.getTime())) {
+                        this.displayResult("The source date or time is invalid.", true);
+                        return;
+                    }
+
+                    try {
+                        const targetDateOptions = {
+                            timeZone: targetZone,
+                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                        };
+                        const targetTimeOptions = {
+                            timeZone: targetZone,
+                            hour: '2-digit', minute: '2-digit', second: '2-digit',
+                            timeZoneName: 'short', hour12: true
+                        };
+                        
+                        const finalDateStr = sourceDate.toLocaleDateString('en-US', targetDateOptions);
+                        const finalTimeStr = sourceDate.toLocaleTimeString('en-US', targetTimeOptions);
+                        
+                        const resultMessage = `
+                            Source: ${time} on ${dateStr} (${sourceZone.replace(/_/g, ' ')})<br>
+                            Is equivalent to:
+                            <strong>${finalDateStr}</strong>
+                            <strong>${finalTimeStr}</strong>
+                        `;
+                        this.displayResult(resultMessage, false);
+
+                    } catch (e) {
+                        this.displayResult(`An error occurred during conversion: ${e.message}`, true);
+                    }
+                },
+                
+                init() {
+                    this.autoFillSource();
+                    this.convertBtn.addEventListener('click', () => this.handleConversion());
+
+                    this.srcZone.addEventListener('focus', function() {
+                        this.select();
+                    });
+                }
+            };
+
+            // --- 4. INITIALIZE EVERYTHING ---
+            populateTimezoneList();
+            setupTabs();
+            wc.init();
+            tc.init();
+        });
+    </script>
+
+</body>
+</html>
