@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time Tools</title>
+    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕰️</text></svg>">
+
     <meta property="og:title" content="Time Tools - World Clock & Converter">
     <meta property="og:description" content="A lightweight, single-page tool for tracking world time and converting time zones instantly. No ads, no tracking, just time.">
     <meta property="og:image" content="https://thettun-web.github.io/time-tools/social-preview.png">
     <meta property="og:url" content="https://thettun-web.github.io/time-tools/">
     <meta property="og:type" content="website">
+    
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="https://thettun-web.github.io/time-tools/social-preview.png">
 
@@ -42,7 +45,7 @@
         }
 
         .container {
-            max-width: 1400px; /* Increased slightly for side-by-side layout */
+            max-width: 1400px;
             margin: 0 auto;
         }
         
@@ -97,13 +100,12 @@
             display: block; 
         }
 
-        /* --- 3. Layout Grid (NEW) --- */
+        /* --- 3. Layout Grid --- */
         .main-grid {
             display: grid;
-            /* Left column takes remaining space, Right column is fixed 320px */
             grid-template-columns: 1fr 320px; 
             gap: 30px;
-            align-items: start; /* Align items to top */
+            align-items: start;
         }
 
         /* --- 4. Shared Input Styles --- */
@@ -124,7 +126,7 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             outline: none;
-            min-width: 0; /* Prevents grid blowout */
+            min-width: 0;
         }
         
         input[type="text"]:focus,
@@ -152,7 +154,6 @@
         /* --- 5. Tool 1: World Clock --- */
         #clock-container {
             display: grid;
-            /* Adjusted minmax to fit better in the narrower column */
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
         }
@@ -214,13 +215,11 @@
         /* --- 6. Tool 2: Time Converter --- */
         .converter-grid {
             display: grid;
-            /* Stack on top of each other by default in this layout */
             grid-template-columns: 1fr; 
             gap: 30px;
         }
         
         @media (min-width: 1100px) {
-             /* If screen is wide enough, put converter columns side by side */
             .converter-grid {
                 grid-template-columns: 1fr 1fr;
             }
@@ -281,7 +280,6 @@
             gap: 15px;
             text-align: center;
             border: 1px solid var(--border-color);
-            /* Optional: Makes it stay on screen while scrolling */
             position: sticky;
             top: 20px; 
         }
@@ -327,12 +325,10 @@
                 font-size: 1.8rem;
             }
 
-            /* Collapse main grid to single column */
             .main-grid {
                 grid-template-columns: 1fr;
             }
             
-            /* Sidebar becomes a footer again on mobile */
             .bmc-sidebar {
                 position: static;
                 margin-top: 20px;
@@ -569,11 +565,13 @@
                     const sourceZone = this.srcZone.value.trim();
                     const targetZone = this.targetTz.value.trim();
 
+                    // 1. Validate inputs
                     if (!dateStr || !time || !sourceZone || !targetZone) {
                         this.displayResult("Please fill out all four fields.", true);
                         return;
                     }
 
+                    // Parse DD/MM/YY
                     const dateParts = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{2})$/);
                     if (!dateParts) {
                         this.displayResult("Date must be in `DD/MM/YY` format (e.g., `25/10/25`).", true);
@@ -584,26 +582,45 @@
                     const month = dateParts[2];
                     const yearDigits = parseInt(dateParts[3], 10);
                     const fullYear = (yearDigits < 70) ? 2000 + yearDigits : 1900 + yearDigits;
+                    
                     const parsedDate = `${fullYear}-${month}-${day}`;
                     
+                    // 2. Validate Time Zones and get Source Offset
                     let sourceOffset;
                     try {
+                        // Create a reference date to handle DST correctly
                         const refDate = new Date(`${parsedDate}T12:00:00Z`);
+                        
                         const offsetFormatter = new Intl.DateTimeFormat('en', { 
-                            timeZone: sourceZone, timeZoneName: 'longOffset' 
+                            timeZone: sourceZone, 
+                            timeZoneName: 'longOffset' 
                         });
-                        const offsetString = offsetFormatter.format(refDate);
+                        
+                        // --- BUG FIX APPLIED HERE ---
+                        // Use formatToParts to safely extract ONLY the timezone name
+                        const parts = offsetFormatter.formatToParts(refDate);
+                        const offsetPart = parts.find(p => p.type === 'timeZoneName');
+                        const offsetString = offsetPart ? offsetPart.value : ''; 
+                        // ---------------------------
+
+                        // Parse "GMT+8" or "GMT-05:00" into "+HH:MM"
                         const offsetParts = offsetString.replace('GMT', '').split(':');
-                        const sign = offsetParts[0][0];
+                        const sign = offsetParts[0][0]; 
                         const hours = offsetParts[0].substring(1);
                         const minutes = offsetParts[1] || '00';
+                        
                         sourceOffset = `${sign}${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+                        
+                        // Validate Target Zone
                         new Intl.DateTimeFormat(undefined, { timeZone: targetZone });
+
                     } catch (e) {
+                        console.error(e);
                         this.displayResult(`Invalid Time Zone. Please use the autocomplete list.`, true);
                         return;
                     }
                     
+                    // 3. Build ISO string
                     const isoString = `${parsedDate}T${time}:00${sourceOffset}`;
                     const sourceDate = new Date(isoString);
 
@@ -612,6 +629,7 @@
                         return;
                     }
 
+                    // 4. Perform the conversion
                     try {
                         const targetDateOptions = {
                             timeZone: targetZone,
@@ -658,5 +676,4 @@
     </script>
 
 </body>
-
 </html>
